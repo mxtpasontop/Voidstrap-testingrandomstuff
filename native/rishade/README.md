@@ -8,6 +8,10 @@ Voidstrap captures the Roblox window with Windows Graphics Capture (WGC) and run
 
 On first enable, Voidstrap grabs ReShade 6.8 and official shader packs into `Extensions/RiShade`, keeping your existing presets and configs safe.
 
+## Remote desktops
+
+The RiShade menu stays visible to recording and remote desktop software, including Shadow. When Windows Graphics Capture is unavailable, opening the menu pauses monitor capture and displays the last captured game frame behind the menu. Closing the menu resumes capture. This prevents the compositor from capturing itself while the menu is visible. The fallback game output remains excluded from capture when the menu is closed.
+
 ## Building
 
 ```sh

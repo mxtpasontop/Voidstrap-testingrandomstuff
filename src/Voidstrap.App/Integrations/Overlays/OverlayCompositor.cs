@@ -673,6 +673,7 @@ namespace Voidstrap.Integrations.Overlays
 
         private void SetRecordingVisibility(bool visible)
         {
+            visible |= _riShadeInteractive;
             if (_recordingVisible == visible || _hwnd == IntPtr.Zero)
                 return;
             uint affinity = visible ? Interop.WDA_NONE : Interop.WDA_EXCLUDEFROMCAPTURE;
@@ -684,7 +685,9 @@ namespace Voidstrap.Integrations.Overlays
                 return;
             }
             _recordingVisible = visible;
-            App.Logger.WriteLine(LOG_IDENT, visible
+            App.Logger.WriteLine(LOG_IDENT, visible && _wgc == null && _riShadeInteractive
+                ? "RiShade menu visible to remote desktop software, monitor capture paused while the menu is open"
+                : visible
                 ? "OBS output ready as Voidstrap Game Output"
                 : "OBS output paused while screen capture fallback prevents feedback");
         }
@@ -845,6 +848,9 @@ namespace Voidstrap.Integrations.Overlays
                 if (overlayOpen != _riShadeInteractive && _hwnd != IntPtr.Zero)
                 {
                     _riShadeInteractive = overlayOpen;
+                    SetRecordingVisibility(_wgc != null);
+                    ResetCaptureMeasurements();
+                    _fruc?.Deprime();
                     RiShadePanel.NotifyOpenChanged(overlayOpen);
                     nint exStyle = Interop.GetWindowLongPtrW(_hwnd, Interop.GWL_EXSTYLE);
                     if (overlayOpen)
@@ -885,6 +891,7 @@ namespace Voidstrap.Integrations.Overlays
                 Interop.SetWindowPos(_hwnd, IntPtr.Zero, 0, 0, 0, 0, Interop.SWP_NOMOVE | Interop.SWP_NOSIZE | Interop.SWP_NOZORDER | Interop.SWP_FRAMECHANGED);
             }
             _riShadeInteractive = false;
+            SetRecordingVisibility(_wgc != null);
             _riRuntimeRetryAt = 0;
             if (_riRuntime == IntPtr.Zero)
                 return;
@@ -2065,6 +2072,21 @@ namespace Voidstrap.Integrations.Overlays
 
         private void RenderFrame(CancellationToken token)
         {
+            if (_wgc == null && _riShadeInteractive)
+            {
+                if (TryRestoreWindowCapture())
+                    return;
+                if (_backBufferRtv != null)
+                {
+                    if (_rawValid && _rawSrv != null)
+                        DrawBlit(_psPass!, _backBufferRtv, _rawSrv);
+                    else
+                        _context!.ClearRenderTargetView(_backBufferRtv, new Color4(18f / 255f, 18f / 255f, 21f / 255f, 1f));
+                    Present(1);
+                }
+                return;
+            }
+
             int aaMethod = AntiAliasingSettings.MethodIndex;
             bool aaOn = aaMethod > 0;
             int fgMode = FrameGenSettings.ModeIndex;
