@@ -858,8 +858,8 @@ namespace Voidstrap.Integrations.Overlays
                         exStyle &= ~(Interop.WS_EX_TRANSPARENT | Interop.WS_EX_NOACTIVATE);
                         Interop.SetWindowLongPtrW(_hwnd, Interop.GWL_EXSTYLE, exStyle);
                         Interop.SetWindowPos(_hwnd, IntPtr.Zero, 0, 0, 0, 0, Interop.SWP_NOMOVE | Interop.SWP_NOSIZE | Interop.SWP_NOZORDER | Interop.SWP_FRAMECHANGED);
-                        if (_hiddenByFocus)
-                            Interop.ShowWindow(_hwnd, Interop.SW_SHOWNOACTIVATE);
+                        _nextVisibilityCheckMs = 0;
+                        Interop.ShowWindow(_hwnd, Interop.SW_SHOWNOACTIVATE);
                         Interop.SetForegroundWindow(_hwnd);
                         Interop.SetCursor(Interop.LoadCursorW(IntPtr.Zero, (IntPtr)32512));
                     }
@@ -2070,20 +2070,24 @@ namespace Voidstrap.Integrations.Overlays
             }
         }
 
+        private void PresentRiShadeMenu()
+        {
+            if (_backBufferRtv == null)
+                return;
+            if (_rawValid && _rawSrv != null)
+                DrawBlit(_psPass!, _backBufferRtv, _rawSrv);
+            else
+                _context!.ClearRenderTargetView(_backBufferRtv, new Color4(18f / 255f, 18f / 255f, 21f / 255f, 1f));
+            Present(1);
+        }
+
         private void RenderFrame(CancellationToken token)
         {
             if (_wgc == null && _riShadeInteractive)
             {
                 if (TryRestoreWindowCapture())
                     return;
-                if (_backBufferRtv != null)
-                {
-                    if (_rawValid && _rawSrv != null)
-                        DrawBlit(_psPass!, _backBufferRtv, _rawSrv);
-                    else
-                        _context!.ClearRenderTargetView(_backBufferRtv, new Color4(18f / 255f, 18f / 255f, 21f / 255f, 1f));
-                    Present(1);
-                }
+                PresentRiShadeMenu();
                 return;
             }
 
@@ -2128,6 +2132,11 @@ namespace Voidstrap.Integrations.Overlays
             bool fresh = CaptureFrame();
             if (!fresh)
             {
+                if (_riShadeInteractive)
+                {
+                    PresentRiShadeMenu();
+                    return;
+                }
                 bool filled = TryStutterFill(token);
                 if (!filled && !TryHomepageIdlePresent())
                 {

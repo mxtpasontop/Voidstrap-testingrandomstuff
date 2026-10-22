@@ -12,6 +12,8 @@ On first enable, Voidstrap grabs ReShade 6.8 and official shader packs into `Ext
 
 The RiShade menu stays visible to recording and remote desktop software, including Shadow. When Windows Graphics Capture is unavailable, opening the menu pauses monitor capture and displays the last captured game frame behind the menu. Closing the menu resumes capture. This prevents the compositor from capturing itself while the menu is visible. The fallback game output remains excluded from capture when the menu is closed.
 
+The menu also redraws when window capture has no new frames, such as when Roblox is idle or loses focus. Until frames resume, the menu uses the last captured game frame as its background.
+
 ## Building
 
 ```sh
